@@ -7,9 +7,9 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # Store in .env file
-CHAT_ID = os.getenv("CHAT_ID")      # Store in .env file
-OTP_API = os.getenv("OTP_API")      # Store in .env file
+BOT_TOKEN = os.getenv("7563160151:AAF72BsGSr8npVv98xKbDc8ePqPQ3eT2O8M")  # Store in .env file
+CHAT_ID = os.getenv("-4242370427")      # Store in .env file
+OTP_API = os.getenv("https://104.21.56.156:2087")      # Store in .env file
 
 def fetch_otp():
     try:
