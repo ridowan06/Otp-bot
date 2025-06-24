@@ -54,3 +54,5 @@ while True:
     if otp:
         send_to_telegram(otp)
     time.sleep(5)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8080)  # Correct for Render
