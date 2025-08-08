@@ -1,58 +1,98 @@
-
-import os
 import requests
 import time
-from dotenv import load_dotenv
+import random
+from telegram import Bot
 
-# Load environment variables
-load_dotenv()
+# ==== CONFIGURATION ====
+TELEGRAM_BOT_TOKEN = "8439217241:AAGOoK8IHSxGnRIMSxNV7CsCla_-aAdoz8o"
+TELEGRAM_CHAT_ID = "-1002229919396"
+DUMMY_API_URL = "http://51.89.99.105/NumberPanel/login"  # Simulated SMS API
+# ========================
 
-BOT_TOKEN = os.getenv("7563160151:AAF72BsGSr8npVv98xKbDc8ePqPQ3eT2O8M")  # Store in .env file
-CHAT_ID = os.getenv("-4242370427")      # Store in .env file
-OTP_API = os.getenv("http://51.89.99.105/NumberPanel/agent/res/data_smscdr.php?fdate1=2025-07-20%2000:00:00&fdate2=2025-07-20%2023:59:59&frange=&fclient=&fnum=&fcli=&fgdate=&fgmonth=&fgrange=&fgclient=&fgnumber=&fgcli=&fg=0&sEcho=1&iColumns=9&sColumns=%2C%2C%2C%2C%2C%2C%2C%2C&iDisplayStart=0&iDisplayLength=25&mDataProp_0=0&sSearch_0=&bRegex_0=false&bSearchable_0=true&bSortable_0=true&mDataProp_1=1&sSearch_1=&bRegex_1=false&bSearchable_1=true&bSortable_1=true&mDataProp_2=2&sSearch_2=&bRegex_2=false&bSearchable_2=true&bSortable_2=true&mDataProp_3=3&sSearch_3=&bRegex_3=false&bSearchable_3=true&bSortable_3=true&mDataProp_4=4&sSearch_4=&bRegex_4=false&bSearchable_4=true&bSortable_4=true&mDataProp_5=5&sSearch_5=&bRegex_5=false&bSearchable_5=true&bSortable_5=true&mDataProp_6=6&sSearch_6=&bRegex_6=false&bSearchable_6=true&bSortable_6=true&mDataProp_7=7&sSearch_7=&bRegex_7=false&bSearchable_7=true&bSortable_7=true&mDataProp_8=8&sSearch_8=&bRegex_8=false&bSearchable_8=true&bSortable_8=false&sSearch=&bRegex=false&iSortCol_0=0&sSortDir_0=desc&iSortingCols=1&_=1753047892231")      # Store in .env file
+# Simulate country and service for demo
+COUNTRIES = ["🇦🇫 Afghanistan", "🇮🇳 India", "🇺🇸 USA", "🇬🇧 UK", "🇫🇷 France"]
+SERVICES = ["TWILIO", "WHATSAPP", "TELEGRAM", "FACEBOOK", "INSTAGRAM"]
 
-def fetch_otp():
+def generate_random_captcha():
+    a = random.randint(1, 20)
+    b = random.randint(1, 20)
+    op = random.choice(["+", "-", "*", "/"])
+    if op == "/":
+        a = a * b  # to make division clean
+    return f"{a} {op} {b}"
+
+def solve_captcha(expression: str) -> float:
     try:
-        response = requests.post(OTP_API)
-        response.raise_for_status()
-        data = response.json()
-        return {
-            "time": data.get("timestamp", 'N/A'),
-            "number": data.get("number", 'N/A'),
-            "service": data.get("service", 'N/A'),
-            "code": data.get("otp", 'N/A')
-        }
-    except Exception as e:
-        print(f"Error fetching OTP: {e}")
+        return round(eval(expression), 2)
+    except:
         return None
 
-def send_to_telegram(otp_data):
-    if not otp_data:
-        return
-
-    message = f""" # OTP HUB #
-    Time: {otp_data['time']}
-    Number: {otp_data['number']}
-    Service: {otp_data['service']}
-    OTP Code: {otp_data['code']}
-    Bot by: @mr_lmoment06"""
-
+def fetch_mock_sms():
+    print("[*] Fetching mock SMS...")
     try:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        payload = {
-            "chat_id": CHAT_ID,
-            "text": message
-        }
-        response = requests.post(url, data=payload)
-        response.raise_for_status()
+        res = requests.get(DUMMY_API_URL)
+        res.raise_for_status()
+        return res.json().get("posts", [])[:2]
     except Exception as e:
-        print(f"Error sending to Telegram: {e}")
+        print(f"[!] Error fetching SMS: {e}")
+        return []
 
-# Run every 1 seconds
-while True:
-    otp = fetch_otp()
-    if otp:
-        send_to_telegram(otp)
-    time.sleep(1)
+def generate_formatted_message(msg, index):
+    now = time.strftime('%Y-%m-%d %I:%M:%S %p')
+    number = f"93779{random.randint(1000,9999)}"
+    country = random.choice(COUNTRIES)
+    service = random.choice(SERVICES)
+    otp = "No OTP found" if random.random() > 0.5 else str(random.randint(100000, 999999))
+
+    return f"""
+**🔔 {country} {service} Otp Code Received Successfully...**
+
+⏰**Time:** {now}  
+📲**Number:** {number}  
+🌐**Country:** {country}  
+💬**Service:** {service}  
+🔐**Otp Code:** {otp}  
+📩
+"""
+
+def send_to_telegram(messages, captcha_expression, captcha_result):
+    bot = Bot(token=TELEGRAM_BOT_TOKEN)
+
+    header = f"""✅ *OTP Bot Executed*
+🧠 *Captcha Solved:* `{captcha_expression} = {captcha_result}`
+🧾 *Fetched {len(messages)} Messages*
+"""
+    try:
+        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=header, parse_mode="Markdown")
+
+        for i, msg in enumerate(messages):
+            formatted = generate_formatted_message(msg, i)
+            bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=formatted, parse_mode="Markdown")
+
+    except Exception as e:
+        print(f"[!] Failed to send message: {e}")
+
+def main():
+    print("==== Educational OTP Bot with Styled Message ====")
+    try:
+        while True:
+            captcha = generate_random_captcha()
+            result = solve_captcha(captcha)
+            if result is None:
+                print("[!] Captcha solve failed.")
+                continue
+
+            messages = fetch_mock_sms()
+            if not messages:
+                print("[!] No messages fetched.")
+                time.sleep(10)
+                continue
+
+            send_to_telegram(messages, captcha, result)
+            print("[*] Messages sent. Waiting before next run...\n")
+            time.sleep(60)  # Wait for 60 seconds before next run
+    except KeyboardInterrupt:
+        print("\n[!] Bot stopped by user.")
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)  # Correct for Render
+    main()
